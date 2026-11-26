@@ -124,7 +124,7 @@ export default async function WasteBankDashboard() {
               </tr>
             </thead>
             <tbody className="divide-y divide-looop-border">
-              {bank?.deposits.map((dep) => (
+              {bank?.deposits?.map((dep: any) => (
                 <tr key={dep.id} className="hover:bg-looop-bg/50 transition">
                   <td className="py-3 px-4 font-mono font-bold text-looop-text">{dep.code}</td>
                   <td className="py-3 px-4 font-medium text-looop-text">{dep.citizen.name}</td>

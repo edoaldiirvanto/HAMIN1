@@ -89,7 +89,7 @@ export default async function CitizenDashboard() {
           <span className="text-[11px] text-looop-muted">Saldo tidak digabung</span>
         </div>
         <div className="space-y-2">
-          {user?.balances.map((b) => (
+          {user?.balances?.map((b: any) => (
             <Card key={b.id} className="p-3.5 flex items-center justify-between">
               <div>
                 <div className="text-xs font-bold text-looop-text">{b.wasteBank.name}</div>
@@ -118,7 +118,7 @@ export default async function CitizenDashboard() {
         </div>
 
         <div className="space-y-2.5">
-          {user?.deposits.map((dep) => (
+          {user?.deposits?.map((dep: any) => (
             <Card key={dep.id} className="p-3.5 flex items-center justify-between hover:border-looop-secondary/40 transition">
               <div>
                 <div className="flex items-center gap-2 mb-1">
