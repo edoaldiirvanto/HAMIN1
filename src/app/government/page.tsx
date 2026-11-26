@@ -196,7 +196,7 @@ export default async function GovernmentDashboardPage() {
                 </thead>
                 <tbody className="divide-y divide-looop-border">
                   {wasteBanks.map((b) => {
-                    const bankStock = b.inventory.reduce((acc, i) => acc + i.stockKg, 0);
+                    const bankStock = b.inventory.reduce((acc: number, i: any) => acc + (i.stockKg || 0), 0);
                     return (
                       <tr key={b.id} className="hover:bg-looop-bg/50">
                         <td className="py-3 px-3 font-bold text-looop-text">{b.name}</td>
