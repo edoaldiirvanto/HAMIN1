@@ -1,0 +1,20 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --looop-primary: #123D32;
+  --looop-secondary: #2F805C;
+  --looop-accent: #B8E4C5;
+  --looop-bg: #F5F7F2;
+  --looop-surface: #FFFFFF;
+  --looop-text: #17231D;
+  --looop-muted: #68756D;
+  --looop-border: #E4EAE4;
+}
+
+body {
+  color: #17231D;
+  background-color: #F5F7F2;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}

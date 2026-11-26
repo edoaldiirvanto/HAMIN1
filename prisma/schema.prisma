@@ -1,0 +1,202 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String        @id @default(cuid())
+  email        String        @unique
+  passwordHash String
+  name         String
+  phone        String?
+  role         String        @default("CITIZEN") // CITIZEN, WASTE_BANK_ADMIN, WASTE_BANK_STAFF, GOVERNMENT, SUPER_ADMIN
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  wasteBankId  String?
+  wasteBank    WasteBank?    @relation("BankStaff", fields: [wasteBankId], references: [id])
+
+  memberships  Membership[]
+  deposits     Deposit[]
+  balances     UserBalance[]
+  payouts      Payout[]
+  auditLogs    AuditLog[]
+}
+
+model Region {
+  id         String      @id @default(cuid())
+  regency    String      // Kabupaten
+  district   String      // Kecamatan
+  village    String      // Desa / Kelurahan
+  wasteBanks WasteBank[]
+}
+
+model WasteBank {
+  id             String          @id @default(cuid())
+  name           String
+  code           String          @unique
+  address        String
+  phone          String?
+  operatingHours String?
+  isActive       Boolean         @default(true)
+  regionId       String
+  region         Region          @relation(fields: [regionId], references: [id])
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  staff          User[]          @relation("BankStaff")
+  prices         WastePrice[]
+  deposits       Deposit[]
+  balances       UserBalance[]
+  payouts        Payout[]
+  inventory      InventoryItem[]
+  memberships    Membership[]
+}
+
+model WasteCategory {
+  id          String      @id @default(cuid())
+  name        String      @unique // Plastik, Kertas, Logam, Kaca
+  description String?
+  items       WasteItem[]
+}
+
+model WasteItem {
+  id          String          @id @default(cuid())
+  name        String          // Kardus, Botol PET Bening, Kaleng Alumunium
+  unit        String          @default("kg")
+  categoryId  String
+  category    WasteCategory   @relation(fields: [categoryId], references: [id])
+
+  prices      WastePrice[]
+  depositItems DepositItem[]
+  inventory   InventoryItem[]
+}
+
+model WastePrice {
+  id          String    @id @default(cuid())
+  wasteBankId String
+  wasteBank   WasteBank @relation(fields: [wasteBankId], references: [id])
+  wasteItemId String
+  wasteItem   WasteItem @relation(fields: [wasteItemId], references: [id])
+  pricePerKg  Float
+  effectiveAt DateTime  @default(now())
+  isAvailable Boolean   @default(true)
+
+  @@unique([wasteBankId, wasteItemId])
+}
+
+model Membership {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  wasteBankId String
+  wasteBank   WasteBank @relation(fields: [wasteBankId], references: [id])
+  status      String    @default("ACTIVE") // ACTIVE, INACTIVE, PENDING
+  joinedAt    DateTime  @default(now())
+
+  @@unique([userId, wasteBankId])
+}
+
+model Deposit {
+  id             String        @id @default(cuid())
+  code           String        @unique // LOO-DEP-000001
+  citizenId      String
+  citizen        User          @relation(fields: [citizenId], references: [id])
+  wasteBankId    String
+  wasteBank      WasteBank     @relation(fields: [wasteBankId], references: [id])
+  status         String        @default("SUBMITTED") // DRAFT, SUBMITTED, ACCEPTED, REJECTED, SCHEDULED, RECEIVED, WEIGHING, AWAITING_CONFIRMATION, COMPLETED, CANCELLED, DISPUTED
+  scheduledDate  DateTime?
+  notes          String?
+  weighingNotes  String?
+  totalEstimated Float         @default(0)
+  totalActual    Float         @default(0)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  items          DepositItem[]
+  ledgerEntries  LedgerEntry[]
+}
+
+model DepositItem {
+  id             String    @id @default(cuid())
+  depositId      String
+  deposit        Deposit   @relation(fields: [depositId], references: [id], onDelete: Cascade)
+  wasteItemId    String
+  wasteItem      WasteItem @relation(fields: [wasteItemId], references: [id])
+  estimatedKg    Float     @default(0)
+  actualKg       Float     @default(0)
+  priceSnapshot  Float     @default(0)
+  subtotal       Float     @default(0)
+}
+
+model UserBalance {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  wasteBankId String
+  wasteBank   WasteBank @relation(fields: [wasteBankId], references: [id])
+  available   Float     @default(0)
+  held        Float     @default(0)
+
+  @@unique([userId, wasteBankId])
+}
+
+model LedgerEntry {
+  id          String          @id @default(cuid())
+  referenceNo String          // LOO-TRX-000001
+  userId      String
+  wasteBankId String
+  type        String          // CREDIT_DEPOSIT, DEBIT_PAYOUT_HOLD, DEBIT_PAYOUT_RELEASE, CREDIT_PAYOUT_REFUND, ADJUSTMENT
+  amount      Float
+  description String
+  depositId   String?
+  deposit     Deposit?        @relation(fields: [depositId], references: [id])
+  payoutId    String?
+  payout      Payout?         @relation(fields: [payoutId], references: [id])
+  createdAt   DateTime        @default(now())
+}
+
+model Payout {
+  id             String        @id @default(cuid())
+  code           String        @unique // LOO-PAY-000001
+  userId         String
+  user           User          @relation(fields: [userId], references: [id])
+  wasteBankId    String
+  wasteBank      WasteBank     @relation(fields: [wasteBankId], references: [id])
+  amount         Float
+  method         String        // CASH, BANK_TRANSFER
+  accountDetails String?
+  status         String        @default("REQUESTED") // REQUESTED, APPROVED, PROCESSING, PAID, REJECTED, CANCELLED, FAILED
+  paymentProof   String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  ledgerEntries  LedgerEntry[]
+}
+
+model InventoryItem {
+  id          String    @id @default(cuid())
+  wasteBankId String
+  wasteBank   WasteBank @relation(fields: [wasteBankId], references: [id])
+  wasteItemId String
+  wasteItem   WasteItem @relation(fields: [wasteItemId], references: [id])
+  stockKg     Float     @default(0)
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([wasteBankId, wasteItemId])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String
+  module    String
+  details   String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+}
