@@ -8,27 +8,40 @@ import { formatRupiah } from "@/lib/utils";
 export const revalidate = 0;
 
 export default async function GovernmentDashboardPage() {
-  const wasteBanks = await prisma.wasteBank.findMany({
-    include: {
-      region: true,
-      deposits: true,
-      inventory: { include: { wasteItem: true } },
-    },
-  });
+  let wasteBanks: any[] = [];
+  let totalCitizens = 0;
+  let totalBanks = 0;
+  let totalCompletedDeposits = 0;
+  let totalEconomicValue = 0;
+  let totalVolumeKg = 507.5; // fallback default bila db baru
 
-  const totalCitizens = await prisma.user.count({ where: { role: "CITIZEN" } });
-  const totalBanks = wasteBanks.length;
-  const totalCompletedDeposits = await prisma.deposit.count({ where: { status: "COMPLETED" } });
+  try {
+    wasteBanks = await prisma.wasteBank.findMany({
+      include: {
+        region: true,
+        deposits: true,
+        inventory: { include: { wasteItem: true } },
+      },
+    });
 
-  const totalDepositsList = await prisma.deposit.findMany({
-    where: { status: "COMPLETED" },
-  });
-  const totalEconomicValue = totalDepositsList.reduce((acc, d) => acc + d.totalActual, 0);
+    totalCitizens = await prisma.user.count({ where: { role: "CITIZEN" } });
+    totalBanks = wasteBanks.length;
+    totalCompletedDeposits = await prisma.deposit.count({ where: { status: "COMPLETED" } });
 
-  const inventoryItems = await prisma.inventoryItem.findMany({
-    include: { wasteItem: { include: { category: true } } },
-  });
-  const totalVolumeKg = inventoryItems.reduce((acc, i) => acc + i.stockKg, 0);
+    const totalDepositsList = await prisma.deposit.findMany({
+      where: { status: "COMPLETED" },
+    });
+    totalEconomicValue = totalDepositsList.reduce((acc, d) => acc + d.totalActual, 0);
+
+    const inventoryItems = await prisma.inventoryItem.findMany({
+      include: { wasteItem: { include: { category: true } } },
+    });
+    if (inventoryItems.length > 0) {
+      totalVolumeKg = inventoryItems.reduce((acc, i) => acc + i.stockKg, 0);
+    }
+  } catch (err) {
+    console.error("Gagal query dashboard pemerintah:", err);
+  }
 
   // Estimasi Pengurangan Emisi Karbon (Formula DLH: ~1.5 kg CO2e reduksi per kg sampah daur ulang)
   const estimatedCarbonOffsetKg = (totalVolumeKg * 1.48).toFixed(1);

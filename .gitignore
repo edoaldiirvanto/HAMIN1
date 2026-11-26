@@ -34,10 +34,8 @@ yarn-error.log*
 .env.local
 .env*.local
 
-# sqlite database
-dev.db
+# sqlite journal only (commit dev.db for Vercel instant preview)
 dev.db-journal
-*.db
 *.db-journal
 
 # vercel

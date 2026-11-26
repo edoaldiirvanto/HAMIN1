@@ -17,16 +17,32 @@ import { prisma } from "@/lib/prisma";
 export const revalidate = 0;
 
 export default async function HomePage() {
-  const wasteBanks = await prisma.wasteBank.findMany({
-    include: {
-      region: true,
-      prices: {
-        include: { wasteItem: true },
-        take: 3,
+  let wasteBanks: Array<{
+    id: string;
+    name: string;
+    address: string;
+    region: { village: string; district: string };
+    prices: Array<{
+      id: string;
+      pricePerKg: number;
+      wasteItem: { name: string };
+    }>;
+  }> = [];
+
+  try {
+    wasteBanks = await prisma.wasteBank.findMany({
+      include: {
+        region: true,
+        prices: {
+          include: { wasteItem: true },
+          take: 3,
+        },
       },
-    },
-    take: 2,
-  });
+      take: 2,
+    });
+  } catch (err) {
+    console.error("Gagal memuat bank sampah:", err);
+  }
 
   return (
     <div className="flex flex-col min-h-screen">
