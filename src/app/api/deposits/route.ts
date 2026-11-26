@@ -20,11 +20,11 @@ export async function POST(req: Request) {
     const prices = await prisma.wastePrice.findMany({
       where: { wasteBankId },
     });
-    const priceMap = new Map(prices.map((p) => [p.wasteItemId, p.pricePerKg]));
+    const priceMap = new Map<string, number>(prices.map((p: any) => [p.wasteItemId, p.pricePerKg]));
 
     let totalEstimated = 0;
     const depositItemsData = items.map((item: { wasteItemId: string; estimatedKg: number }) => {
-      const price = priceMap.get(item.wasteItemId) || 0;
+      const price = Number(priceMap.get(item.wasteItemId) || 0);
       const subtotal = Math.round(item.estimatedKg * price);
       totalEstimated += subtotal;
       return {

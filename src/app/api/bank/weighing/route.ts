@@ -18,10 +18,10 @@ export async function POST(req: Request) {
 
     let calculatedTotalActual = 0;
 
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: any) => {
       // 1. Update bobot aktual tiap item
       for (const it of items) {
-        const existing = deposit.items.find((x) => x.id === it.id);
+        const existing = deposit.items.find((x: any) => x.id === it.id);
         if (existing) {
           const subtotal = Math.round(it.actualKg * existing.priceSnapshot);
           calculatedTotalActual += subtotal;
