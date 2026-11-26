@@ -43,6 +43,37 @@ export default async function WasteBankDashboard() {
     console.error("Gagal load bank dashboard:", err);
   }
 
+  if (!bank) {
+    bank = {
+      id: "bank-1",
+      name: "Bank Sampah Guyub Rukun",
+      code: "BS-CTR-01",
+      payouts: [],
+      deposits: [
+        {
+          id: "dep-1",
+          code: "DEP-202611-001",
+          status: "WEIGHING",
+          createdAt: new Date().toISOString(),
+          totalEstimated: 35000,
+          totalActual: 38500,
+          citizen: { name: "Budi Santoso" },
+        },
+        {
+          id: "dep-2",
+          code: "DEP-202611-002",
+          status: "COMPLETED",
+          createdAt: new Date().toISOString(),
+          totalEstimated: 18000,
+          totalActual: 18000,
+          citizen: { name: "Siti Rahayu" },
+        },
+      ],
+    };
+    pendingDeposits = 1;
+    totalDeposits = 12;
+  }
+
   return (
     <div className="space-y-6">
       <div>

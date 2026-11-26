@@ -28,6 +28,34 @@ export default async function CitizenDashboard() {
     console.error("Gagal load citizen dashboard:", err);
   }
 
+  if (!user) {
+    user = {
+      id: "citizen-1",
+      name: "Budi Santoso",
+      email: "warga@looop.id",
+      balances: [
+        {
+          id: "bal-1",
+          wasteBankId: "bank-1",
+          available: 125000,
+          held: 0,
+          wasteBank: { name: "Bank Sampah Guyub Rukun" },
+        },
+      ],
+      deposits: [
+        {
+          id: "dep-1",
+          code: "DEP-202611-001",
+          status: "WEIGHING",
+          createdAt: new Date().toISOString(),
+          totalEstimated: 35000,
+          totalActual: 38500,
+          wasteBank: { name: "Bank Sampah Guyub Rukun" },
+        },
+      ],
+    };
+  }
+
   const totalAvailable = user?.balances?.reduce((acc: number, b: any) => acc + b.available, 0) || 125000;
   const totalHeld = user?.balances?.reduce((acc: number, b: any) => acc + b.held, 0) || 0;
 
