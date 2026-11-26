@@ -1,50 +1,68 @@
-# Panduan Menjalankan Aplikasi Looop
+# Looop — Connecting Waste, Creating Value
 
-Platform digital pengelolaan sampah dan ekonomi sirkular **Looop** telah selesai dibangun sesuai spesifikasi [PRD-Looop.md](file:///d:/TA-PPSI-HAMIN1/PRD-Looop.md) dan pedoman desain Google Stitch [Looop_Design_Skill.md](file:///d:/TA-PPSI-HAMIN1/Looop_Design_Skill.md).
+Platform digital terintegrasi pengelolaan sampah dan ekonomi sirkular yang menghubungkan **Masyarakat (Citizen)**, **Bank Sampah (Waste Bank)**, dan **Pemerintah Daerah (Government)**.
+
+Dibangun dengan **Next.js 15 (App Router)**, **TypeScript**, **Tailwind CSS**, **Prisma ORM**, dan **Google Stitch Design System**.
 
 ---
 
-## 1. Menjalankan Aplikasi
+## 🚀 Panduan Push ke GitHub & Deploy ke Vercel
 
-Jalankan perintah berikut di terminal:
+### Langkah 1: Push ke Repository GitHub Anda
+
+Repository Git lokal pada branch `main` telah diinisialisasi dan seluruh file telah di-commit.
+Jalankan langkah berikut di terminal untuk menghubungkan ke GitHub:
+
+1. Buat repository baru di [github.com/new](https://github.com/new) (misalnya diberi nama `looop-circular-economy`).
+2. Jalankan perintah:
 
 ```bash
-# Menjalankan server pengembangan (Development)
+# Hubungkan ke remote repository Anda (ganti USERNAME dan REPO_NAME)
+git remote add origin https://github.com/USERNAME/REPO_NAME.git
+
+# Push kode ke branch main
+git push -u origin main
+```
+
+---
+
+### Langkah 2: Deploy ke Vercel
+
+Proyek ini telah dilengkapi dengan [`vercel.json`](file:///d:/TA-PPSI-HAMIN1/vercel.json) dan hook `postinstall: prisma generate` pada [`package.json`](file:///d:/TA-PPSI-HAMIN1/package.json).
+
+1. Buka [vercel.com/new](https://vercel.com/new).
+2. Hubungkan akun GitHub Anda dan pilih repository yang baru dibuat (`looop-circular-economy`).
+3. Pada bagian **Environment Variables**, atur variabel berikut jika menggunakan PostgreSQL production (misalnya Neon / Supabase / Vercel Postgres):
+   - `DATABASE_URL` = `postgresql://<user>:<password>@<host>:5432/<dbname>?sslmode=require`
+   *(Catatan: Untuk build instan tanpa database eksternal, konfigurasi default vercel.json telah mengotomatisasi inisialisasi prisma push & seed).*
+4. Klik **Deploy**. Vercel akan otomatis meng-compile dan menghasilkan URL live aplikasi Anda.
+
+---
+
+## 💻 Menjalankan di Komputer Lokal
+
+```bash
+# 1. Jalankan development server
 npm run dev
+
+# 2. Jalankan unit test logika bisnis (Vitest)
+npx vitest run
+
+# 3. Jalankan test build produksi
+npm run build
 ```
 
 Buka peramban di: **`http://localhost:3000`**
 
 ---
 
-## 2. Akun Demo Multi-Role
+## 🔑 Akun Demo Prototipe Multi-Role
 
-Pada halaman login (`/login`) atau langsung dari Landing Page (`/`), tersedia tombol **Akses Cepat Prototipe** untuk mencoba setiap role:
+Pada halaman login ([`/login`](http://localhost:3000/login)) atau dari Landing Page ([`/`](http://localhost:3000)), tersedia shortcut 1-klik untuk setiap role:
 
-| Role | Email Demo | Password | URL Dashboard | Catatan Akses |
-|---|---|---|---|---|
-| **Masyarakat (Citizen)** | `citizen@looop.id` | `demo123` | [`/citizen`](http://localhost:3000/citizen) | Mobile-first bottom navigation (`Beranda`, `Jelajahi`, `Setor`, `Aktivitas`, `Profil`). Saldo terpisah per bank sampah. |
-| **Bank Sampah Admin & Staff** | `bank@looop.id` | `demo123` | [`/bank`](http://localhost:3000/bank) | Sidebar desktop (240–260px). Verifikasi setoran, timbang aktual (`/bank/weighing`), approval pencairan, persediaan. |
-| **Pemerintah Daerah** | `gov@slemankab.go.id` | `demo123` | [`/government`](http://localhost:3000/government) | Read-only executive dashboard: sebaran bank sampah, statistik sampah, total perputaran ekonomi daerah. |
-| **Super Admin** | `admin@looop.id` | `demo123` | [`/admin`](http://localhost:3000/admin) | Master data wilayah, pengguna & role matrix, audit log transaksi keuangan. |
-
----
-
-## 3. Menjalankan Uji Logika Bisnis (Unit Tests)
-
-Untuk memverifikasi kalkulasi penimbangan dan integritas aturan saldo buku besar (ledger):
-
-```bash
-npx vitest run
-```
-
----
-
-## 4. Reset & Seed Ulang Database
-
-Database menggunakan SQLite lokal (`prisma/dev.db`):
-
-```bash
-npx prisma db push
-npx tsx prisma/seed.ts
-```
+| Peran | Kredensial Demo | Dashboard | Fitur Utama |
+|---|---|---|---|
+| **Masyarakat (Citizen)** | `citizen@looop.id` / `demo123` | [`/citizen`](http://localhost:3000/citizen) | Mobile-first bottom nav, setor sampah, tracking status, cek saldo per bank, dan pencairan dana. |
+| **Bank Sampah Admin & Staff** | `bank@looop.id` / `demo123` | [`/bank`](http://localhost:3000/bank) | Sidebar operasional, antrean setoran, **form penimbangan & verifikasi fisik**, harga, stok gudang, dan pencairan. |
+| **Pemerintah Daerah** | `gov@slemankab.go.id` / `demo123` | [`/government`](http://localhost:3000/government) | Read-only executive dashboard: evaluasi bank sampah per kecamatan, estimasi reduksi karbon ($\text{kg CO}_2\text{e}$), dan rekomendasi DLH. |
+| **Super Admin** | `admin@looop.id` / `demo123` | [`/admin`](http://localhost:3000/admin) | Kontrol penuh: Tambah/hapus akun pengguna, aktivasi/suspend izin bank sampah, dan audit trail buku besar. |
