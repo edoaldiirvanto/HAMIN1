@@ -1,78 +1,40 @@
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge, getStatusBadgeVariant } from "@/components/ui/badge";
 import { Scale, Inbox, Wallet, Package } from "lucide-react";
-import { prisma } from "@/lib/prisma";
 import { formatRupiah, formatDate } from "@/lib/utils";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { INITIAL_WASTE_BANKS } from "@/lib/static-data";
 
-export const revalidate = 0;
-
-export default async function WasteBankDashboard() {
-  let bank: any = null;
-  let totalDeposits = 0;
-  let pendingDeposits = 0;
-  let totalStockKg = 507.5;
-
-  try {
-    bank = await prisma.wasteBank.findFirst({
-      where: { code: "BS-CTR-01" },
-      include: {
-        deposits: {
-          orderBy: { createdAt: "desc" },
-          take: 5,
-          include: { citizen: true },
-        },
-        payouts: {
-          where: { status: "REQUESTED" },
-        },
-        inventory: {
-          include: { wasteItem: true },
-        },
+export default function WasteBankDashboard() {
+  const bank = {
+    ...INITIAL_WASTE_BANKS[0],
+    payouts: [{ id: "pay-1" }],
+    deposits: [
+      {
+        id: "dep-1",
+        code: "DEP-202611-001",
+        status: "COMPLETED",
+        createdAt: new Date().toISOString(),
+        totalActual: 38500,
+        totalEstimated: 35000,
+        citizen: { name: "Budi Santoso" },
       },
-    });
+      {
+        id: "dep-2",
+        code: "DEP-202611-002",
+        status: "WEIGHING",
+        createdAt: new Date().toISOString(),
+        totalActual: 0,
+        totalEstimated: 18000,
+        citizen: { name: "Siti Rahayu" },
+      },
+    ],
+  };
 
-    totalDeposits = await prisma.deposit.count({ where: { wasteBankId: bank?.id } });
-    pendingDeposits = await prisma.deposit.count({
-      where: { wasteBankId: bank?.id, status: { in: ["SUBMITTED", "ACCEPTED", "WEIGHING"] } },
-    });
-    if (bank?.inventory?.length > 0) {
-      totalStockKg = bank.inventory.reduce((acc: number, i: any) => acc + i.stockKg, 0);
-    }
-  } catch (err) {
-    console.error("Gagal load bank dashboard:", err);
-  }
-
-  if (!bank) {
-    bank = {
-      id: "bank-1",
-      name: "Bank Sampah Guyub Rukun",
-      code: "BS-CTR-01",
-      payouts: [],
-      deposits: [
-        {
-          id: "dep-1",
-          code: "DEP-202611-001",
-          status: "WEIGHING",
-          createdAt: new Date().toISOString(),
-          totalEstimated: 35000,
-          totalActual: 38500,
-          citizen: { name: "Budi Santoso" },
-        },
-        {
-          id: "dep-2",
-          code: "DEP-202611-002",
-          status: "COMPLETED",
-          createdAt: new Date().toISOString(),
-          totalEstimated: 18000,
-          totalActual: 18000,
-          citizen: { name: "Siti Rahayu" },
-        },
-      ],
-    };
-    pendingDeposits = 1;
-    totalDeposits = 12;
-  }
+  const totalDeposits = 14;
+  const pendingDeposits = 2;
+  const totalStockKg = 507.5;
 
   return (
     <div className="space-y-6">
@@ -120,7 +82,7 @@ export default async function WasteBankDashboard() {
         <Card className="p-5 flex items-center justify-between">
           <div>
             <span className="text-xs font-semibold text-looop-muted block mb-1">Permintaan Pencairan</span>
-            <span className="text-2xl font-extrabold text-looop-text">{bank?.payouts.length || 0}</span>
+            <span className="text-2xl font-extrabold text-looop-text">{bank.payouts.length}</span>
           </div>
           <div className="w-10 h-10 rounded-full bg-looop-accent/40 text-looop-primary flex items-center justify-center">
             <Wallet className="w-5 h-5" />
@@ -155,7 +117,7 @@ export default async function WasteBankDashboard() {
               </tr>
             </thead>
             <tbody className="divide-y divide-looop-border">
-              {bank?.deposits?.map((dep: any) => (
+              {bank.deposits.map((dep: any) => (
                 <tr key={dep.id} className="hover:bg-looop-bg/50 transition">
                   <td className="py-3 px-4 font-mono font-bold text-looop-text">{dep.code}</td>
                   <td className="py-3 px-4 font-medium text-looop-text">{dep.citizen.name}</td>

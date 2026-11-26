@@ -2,69 +2,23 @@ import Link from "next/link";
 import { Logo } from "@/components/ui/logo";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { ShieldCheck, Sparkles, Award } from "lucide-react";
-import { prisma } from "@/lib/prisma";
 import { formatRupiah } from "@/lib/utils";
+import { INITIAL_WASTE_BANKS } from "@/lib/static-data";
 
-export const revalidate = 0;
+export default function GovernmentDashboardPage() {
+  const wasteBanks = INITIAL_WASTE_BANKS.map((b) => ({
+    ...b,
+    stockKg: b.id === "bank-1" ? 320.0 : 187.5,
+    transactionCount: b.id === "bank-1" ? 18 : 10,
+    performance: "Sangat Baik",
+    recommendation: "Dukungan Subsidi Timbangan Digital",
+  }));
 
-export default async function GovernmentDashboardPage() {
-  let wasteBanks: any[] = [];
-  let totalCitizens = 0;
-  let totalBanks = 0;
-  let totalCompletedDeposits = 0;
-  let totalEconomicValue = 0;
-  let totalVolumeKg = 507.5; // fallback default bila db baru
-
-  try {
-    wasteBanks = await prisma.wasteBank.findMany({
-      include: {
-        region: true,
-        deposits: true,
-        inventory: { include: { wasteItem: true } },
-      },
-    });
-
-    totalCitizens = await prisma.user.count({ where: { role: "CITIZEN" } });
-    totalBanks = wasteBanks.length;
-    totalCompletedDeposits = await prisma.deposit.count({ where: { status: "COMPLETED" } });
-
-    const totalDepositsList = await prisma.deposit.findMany({
-      where: { status: "COMPLETED" },
-    });
-    totalEconomicValue = totalDepositsList.reduce((acc, d) => acc + d.totalActual, 0);
-
-    const inventoryItems = await prisma.inventoryItem.findMany({
-      include: { wasteItem: { include: { category: true } } },
-    });
-    if (inventoryItems.length > 0) {
-      totalVolumeKg = inventoryItems.reduce((acc, i) => acc + i.stockKg, 0);
-    }
-  } catch (err) {
-    console.error("Gagal query dashboard pemerintah:", err);
-  }
-
-  if (!wasteBanks || wasteBanks.length === 0) {
-    wasteBanks = [
-      {
-        id: "bank-1",
-        name: "Bank Sampah Guyub Rukun",
-        region: { village: "Caturtunggal", district: "Depok" },
-        inventory: [{ stockKg: 320.0 }],
-        deposits: [{ id: "d1" }, { id: "d2" }, { id: "d3" }],
-      },
-      {
-        id: "bank-2",
-        name: "Bank Sampah Berkah Resik",
-        region: { village: "Sinduadi", district: "Mlati" },
-        inventory: [{ stockKg: 187.5 }],
-        deposits: [{ id: "d4" }, { id: "d5" }],
-      },
-    ];
-    totalCitizens = 42;
-    totalBanks = 2;
-    totalCompletedDeposits = 28;
-    totalEconomicValue = 1850000;
-  }
+  const totalCitizens = 42;
+  const totalBanks = wasteBanks.length;
+  const totalCompletedDeposits = 28;
+  const totalEconomicValue = 1850000;
+  const totalVolumeKg = 507.5;
 
   // Estimasi Pengurangan Emisi Karbon (Formula DLH: ~1.5 kg CO2e reduksi per kg sampah daur ulang)
   const estimatedCarbonOffsetKg = (totalVolumeKg * 1.48).toFixed(1);
@@ -218,31 +172,28 @@ export default async function GovernmentDashboardPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-looop-border">
-                  {wasteBanks.map((b) => {
-                    const bankStock = b.inventory.reduce((acc: number, i: any) => acc + (i.stockKg || 0), 0);
-                    return (
-                      <tr key={b.id} className="hover:bg-looop-bg/50">
-                        <td className="py-3 px-3 font-bold text-looop-text">{b.name}</td>
-                        <td className="py-3 px-3 text-looop-muted">
-                          {b.region.district}, {b.region.village}
-                        </td>
-                        <td className="py-3 px-3 font-mono font-semibold text-looop-text">
-                          {bankStock.toFixed(1)} kg
-                        </td>
-                        <td className="py-3 px-3 font-semibold text-looop-secondary">
-                          {b.deposits.length} transaksi
-                        </td>
-                        <td className="py-3 px-3">
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-looop-success">
-                            Sangat Baik
-                          </span>
-                        </td>
-                        <td className="py-3 px-3 text-right text-[11px] text-looop-muted">
-                          Dukungan Subsidi Timbangan Digital
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {wasteBanks.map((b) => (
+                    <tr key={b.id} className="hover:bg-looop-bg/50">
+                      <td className="py-3 px-3 font-bold text-looop-text">{b.name}</td>
+                      <td className="py-3 px-3 text-looop-muted">
+                        {b.region.district}, {b.region.village}
+                      </td>
+                      <td className="py-3 px-3 font-mono font-semibold text-looop-text">
+                        {b.stockKg.toFixed(1)} kg
+                      </td>
+                      <td className="py-3 px-3 font-semibold text-looop-secondary">
+                        {b.transactionCount} transaksi
+                      </td>
+                      <td className="py-3 px-3">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-looop-success">
+                          {b.performance}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3 text-right text-[11px] text-looop-muted">
+                        {b.recommendation}
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>

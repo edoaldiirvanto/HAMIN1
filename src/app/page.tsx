@@ -12,63 +12,10 @@ import {
   ArrowRight,
   ShieldCheck,
 } from "lucide-react";
-import { prisma } from "@/lib/prisma";
+import { INITIAL_WASTE_BANKS } from "@/lib/static-data";
 
-export const revalidate = 0;
-
-export default async function HomePage() {
-  let wasteBanks: Array<{
-    id: string;
-    name: string;
-    address: string;
-    region: { village: string; district: string };
-    prices: Array<{
-      id: string;
-      pricePerKg: number;
-      wasteItem: { name: string };
-    }>;
-  }> = [];
-
-  try {
-    wasteBanks = await prisma.wasteBank.findMany({
-      include: {
-        region: true,
-        prices: {
-          include: { wasteItem: true },
-          take: 3,
-        },
-      },
-      take: 2,
-    });
-  } catch (err) {
-    console.error("Gagal memuat bank sampah:", err);
-  }
-
-  if (!wasteBanks || wasteBanks.length === 0) {
-    wasteBanks = [
-      {
-        id: "bank-1",
-        name: "Bank Sampah Guyub Rukun",
-        address: "Jl. Kaliurang KM 5.2, Caturtunggal, Depok",
-        region: { village: "Caturtunggal", district: "Depok" },
-        prices: [
-          { id: "p1", pricePerKg: 3500, wasteItem: { name: "Botol PET Bening" } },
-          { id: "p2", pricePerKg: 1800, wasteItem: { name: "Kardus Bekas Tebal" } },
-          { id: "p3", pricePerKg: 12000, wasteItem: { name: "Kaleng Minuman Alumunium" } },
-        ],
-      },
-      {
-        id: "bank-2",
-        name: "Bank Sampah Berkah Resik",
-        address: "Jl. Magelang KM 7.5, Sinduadi, Mlati",
-        region: { village: "Sinduadi", district: "Mlati" },
-        prices: [
-          { id: "p4", pricePerKg: 3600, wasteItem: { name: "Botol PET Bening" } },
-          { id: "p5", pricePerKg: 1900, wasteItem: { name: "Kardus Bekas Tebal" } },
-        ],
-      },
-    ];
-  }
+export default function HomePage() {
+  const wasteBanks = INITIAL_WASTE_BANKS;
 
   return (
     <div className="flex flex-col min-h-screen">

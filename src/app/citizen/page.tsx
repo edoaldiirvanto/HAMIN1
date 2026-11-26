@@ -3,61 +3,14 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge, getStatusBadgeVariant } from "@/components/ui/badge";
 import { Wallet } from "lucide-react";
-import { prisma } from "@/lib/prisma";
 import { formatRupiah, formatDate } from "@/lib/utils";
+import { INITIAL_CITIZEN_USER } from "@/lib/static-data";
 
-export const revalidate = 0;
+export default function CitizenDashboard() {
+  const user = INITIAL_CITIZEN_USER;
 
-export default async function CitizenDashboard() {
-  let user: any = null;
-  try {
-    user = await prisma.user.findFirst({
-      where: { role: "CITIZEN" },
-      include: {
-        balances: {
-          include: { wasteBank: true },
-        },
-        deposits: {
-          take: 3,
-          orderBy: { createdAt: "desc" },
-          include: { wasteBank: true },
-        },
-      },
-    });
-  } catch (err) {
-    console.error("Gagal load citizen dashboard:", err);
-  }
-
-  if (!user) {
-    user = {
-      id: "citizen-1",
-      name: "Budi Santoso",
-      email: "warga@looop.id",
-      balances: [
-        {
-          id: "bal-1",
-          wasteBankId: "bank-1",
-          available: 125000,
-          held: 0,
-          wasteBank: { name: "Bank Sampah Guyub Rukun" },
-        },
-      ],
-      deposits: [
-        {
-          id: "dep-1",
-          code: "DEP-202611-001",
-          status: "WEIGHING",
-          createdAt: new Date().toISOString(),
-          totalEstimated: 35000,
-          totalActual: 38500,
-          wasteBank: { name: "Bank Sampah Guyub Rukun" },
-        },
-      ],
-    };
-  }
-
-  const totalAvailable = user?.balances?.reduce((acc: number, b: any) => acc + b.available, 0) || 125000;
-  const totalHeld = user?.balances?.reduce((acc: number, b: any) => acc + b.held, 0) || 0;
+  const totalAvailable = user.balances.reduce((acc: number, b: any) => acc + b.available, 0);
+  const totalHeld = user.balances.reduce((acc: number, b: any) => acc + b.held, 0);
 
   return (
     <div className="space-y-5 pb-6">
@@ -65,7 +18,7 @@ export default async function CitizenDashboard() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-looop-text">
-            Halo, {user?.name.split(" ")[0] || "Warga Looop"} 👋
+            Halo, {user.name.split(" ")[0]} 👋
           </h1>
           <p className="text-xs text-looop-muted">
             Mari pilah sampah hari ini untuk lingkungan yang lebih bersih.
@@ -117,7 +70,7 @@ export default async function CitizenDashboard() {
           <span className="text-[11px] text-looop-muted">Saldo tidak digabung</span>
         </div>
         <div className="space-y-2">
-          {user?.balances?.map((b: any) => (
+          {user.balances.map((b: any) => (
             <Card key={b.id} className="p-3.5 flex items-center justify-between">
               <div>
                 <div className="text-xs font-bold text-looop-text">{b.wasteBank.name}</div>
@@ -146,7 +99,7 @@ export default async function CitizenDashboard() {
         </div>
 
         <div className="space-y-2.5">
-          {user?.deposits?.map((dep: any) => (
+          {user.deposits.map((dep: any) => (
             <Card key={dep.id} className="p-3.5 flex items-center justify-between hover:border-looop-secondary/40 transition">
               <div>
                 <div className="flex items-center gap-2 mb-1">

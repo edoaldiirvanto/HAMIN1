@@ -2,19 +2,10 @@ import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MapPin, Clock, ArrowRight } from "lucide-react";
-import { prisma } from "@/lib/prisma";
+import { INITIAL_WASTE_BANKS } from "@/lib/static-data";
 
-export const revalidate = 0;
-
-export default async function ExploreWasteBanksPage() {
-  const wasteBanks = await prisma.wasteBank.findMany({
-    include: {
-      region: true,
-      prices: {
-        include: { wasteItem: true },
-      },
-    },
-  });
+export default function ExploreWasteBanksPage() {
+  const wasteBanks = INITIAL_WASTE_BANKS;
 
   return (
     <div className="space-y-4 pb-6">
@@ -48,25 +39,31 @@ export default async function ExploreWasteBanksPage() {
             </div>
 
             <div className="bg-looop-bg rounded-lg p-3 border border-looop-border">
-              <div className="text-xs font-semibold text-looop-text mb-2">Harga Beli Sampah:</div>
-              <div className="grid grid-cols-2 gap-2">
+              <span className="text-[11px] font-bold text-looop-text block mb-2">
+                Katalog Harga Sampah:
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {bank.prices.map((p) => (
-                  <div key={p.id} className="text-xs bg-white p-2 rounded border border-looop-border">
-                    <div className="text-looop-muted text-[11px]">{p.wasteItem.name}</div>
-                    <div className="font-bold text-looop-text">
+                  <div
+                    key={p.id}
+                    className="flex justify-between items-center text-xs bg-white px-2.5 py-1.5 rounded border border-looop-border"
+                  >
+                    <span className="text-looop-text">{p.wasteItem.name}</span>
+                    <span className="font-bold text-looop-secondary font-mono">
                       Rp{p.pricePerKg.toLocaleString("id-ID")}/kg
-                    </div>
+                    </span>
                   </div>
                 ))}
               </div>
             </div>
 
-            <Link href={`/citizen/deposit?bankId=${bank.id}`}>
-              <Button variant="secondary" size="sm" className="w-full gap-1.5">
-                <span>Ajukan Penyetoran Sampah</span>
-                <ArrowRight className="w-4 h-4" />
-              </Button>
-            </Link>
+            <div className="pt-1 flex gap-2">
+              <Link href={`/citizen/deposit?bankId=${bank.id}`} className="flex-1">
+                <Button variant="secondary" size="sm" className="w-full text-xs">
+                  Pilih Bank Sampah Ini
+                </Button>
+              </Link>
+            </div>
           </Card>
         ))}
       </div>
