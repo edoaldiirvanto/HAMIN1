@@ -1,18 +1,30 @@
+"use client";
+
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MapPin, Clock, ArrowRight } from "lucide-react";
-import { INITIAL_WASTE_BANKS } from "@/lib/static-data";
+import { useAppStore } from "@/lib/store";
 
 export default function ExploreWasteBanksPage() {
-  const wasteBanks = INITIAL_WASTE_BANKS;
+  const { state, mounted } = useAppStore();
+
+  if (!mounted) {
+    return (
+      <div className="py-12 text-center text-xs text-looop-muted">
+        Memuat direktori bank sampah...
+      </div>
+    );
+  }
+
+  const wasteBanks = state.wasteBanks;
 
   return (
     <div className="space-y-4 pb-6">
       <div>
         <h1 className="text-lg font-bold text-looop-text">Jelajahi Bank Sampah</h1>
         <p className="text-xs text-looop-muted">
-          Daftar bank sampah terdaftar dan harga beli sampah resmi di wilayah Anda.
+          Daftar bank sampah terdaftar dan harga beli sampah resmi di wilayah Anda ({wasteBanks.length} unit tersedia).
         </p>
       </div>
 

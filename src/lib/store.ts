@@ -723,6 +723,55 @@ export function useAppStore() {
     saveState({ ...current, users: [newStaff, ...current.users] });
   };
 
+  const deleteUser = (userId: string) => {
+    const current = getStoredState();
+    const nextUsers = current.users.filter((u) => u.id !== userId);
+    saveState({ ...current, users: nextUsers });
+  };
+
+  const toggleWasteBankStatus = (bankId: string) => {
+    const current = getStoredState();
+    const nextBanks = current.wasteBanks.map((b) =>
+      b.id === bankId ? { ...b, isActive: !b.isActive } : b
+    );
+    saveState({ ...current, wasteBanks: nextBanks });
+  };
+
+  const addWasteBank = (data: { name: string; address: string; district?: string; village?: string; phone?: string }) => {
+    const current = getStoredState();
+    const newBankId = `bank-${Date.now()}`;
+    const newBank: WasteBankData = {
+      id: newBankId,
+      name: data.name,
+      code: `BS-${data.district?.slice(0, 3).toUpperCase() || "SLM"}-${String(current.wasteBanks.length + 1).padStart(2, "0")}`,
+      address: data.address,
+      phone: data.phone || "08123456789",
+      operatingHours: "Senin - Sabtu: 08:00 - 15:00 WIB",
+      isActive: true,
+      region: {
+        id: `reg-${Date.now()}`,
+        regency: "Sleman",
+        district: data.district || "Depok",
+        village: data.village || "Caturtunggal",
+      },
+      prices: current.wasteBanks[0]?.prices || [],
+      inventory: [
+        {
+          id: `inv-${Date.now()}-1`,
+          wasteItemId: "item-1",
+          wasteItemName: "Botol PET Bening",
+          categoryName: "Plastik",
+          unit: "kg",
+          stockKg: 0,
+          updatedAt: new Date().toISOString(),
+        },
+      ],
+    };
+
+    saveState({ ...current, wasteBanks: [...current.wasteBanks, newBank] });
+    return newBank;
+  };
+
   return {
     state,
     mounted,
@@ -733,5 +782,8 @@ export function useAppStore() {
     registerUser,
     updateWastePrice,
     addStaff,
+    deleteUser,
+    toggleWasteBankStatus,
+    addWasteBank,
   };
 }
