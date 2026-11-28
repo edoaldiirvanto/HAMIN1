@@ -126,11 +126,13 @@ export default function LoginPage() {
           </Button>
         </form>
 
-        <div className="mt-6 text-center text-xs text-looop-muted">
-          Belum punya akun?{" "}
-          <Link href="/register" className="font-semibold text-looop-secondary hover:underline">
-            Daftar sebagai Masyarakat
-          </Link>
+        <div className="mt-6 text-center text-xs text-looop-muted space-y-1">
+          <div>
+            Belum punya akun?{" "}
+            <Link href="/register" className="font-semibold text-looop-secondary hover:underline">
+              Daftar Akun Baru (Warga / Bank Sampah)
+            </Link>
+          </div>
         </div>
       </Card>
     </div>

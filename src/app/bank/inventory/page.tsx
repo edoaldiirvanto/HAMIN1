@@ -1,21 +1,20 @@
+"use client";
+
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
-import { Package } from "lucide-react";
-import { prisma } from "@/lib/prisma";
+import { Package, RefreshCw } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import { useAppStore } from "@/lib/store";
 
-export const revalidate = 0;
+export default function BankInventoryPage() {
+  const { state, mounted } = useAppStore();
 
-export default async function BankInventoryPage() {
-  const bank = await prisma.wasteBank.findFirst({
-    where: { code: "BS-CTR-01" },
-    include: {
-      inventory: {
-        include: { wasteItem: { include: { category: true } } },
-      },
-    },
-  });
+  if (!mounted) {
+    return <div className="p-8 text-center text-xs text-looop-muted">Memuat persediaan gudang...</div>;
+  }
 
-  const totalStock = bank?.inventory.reduce((acc, i) => acc + i.stockKg, 0) || 0;
+  const currentBank = state.wasteBanks[0];
+  const inventory = currentBank.inventory;
+  const totalStock = inventory.reduce((acc, i) => acc + i.stockKg, 0);
 
   return (
     <div className="space-y-6">
@@ -24,7 +23,7 @@ export default async function BankInventoryPage() {
           Persediaan Sampah & Manajemen Stok
         </h1>
         <p className="text-sm text-looop-muted">
-          Pencatatan persediaan sampah di gudang yang bertambah dari transaksi penimbangan warga.
+          Pencatatan persediaan sampah di gudang yang bertambah secara transaksional saat penimbangan selesai.
         </p>
       </div>
 
@@ -32,7 +31,7 @@ export default async function BankInventoryPage() {
         <Card className="p-5 flex items-center justify-between sm:col-span-1">
           <div>
             <span className="text-xs font-semibold text-looop-muted block mb-1">Total Stok di Gudang</span>
-            <span className="text-2xl font-extrabold text-looop-text">{totalStock.toFixed(1)} kg</span>
+            <span className="text-2xl font-extrabold text-looop-text font-mono">{totalStock.toFixed(1)} kg</span>
           </div>
           <div className="w-10 h-10 rounded-full bg-looop-accent/40 text-looop-primary flex items-center justify-center">
             <Package className="w-5 h-5" />
@@ -41,9 +40,9 @@ export default async function BankInventoryPage() {
       </div>
 
       <Card className="p-6">
-        <CardTitle className="mb-2">Stok per Komoditas Sampah</CardTitle>
+        <CardTitle className="mb-2">Stok per Komoditas Sampah ({inventory.length} Komoditas)</CardTitle>
         <CardDescription className="mb-4">
-          Stok otomatis bertambah secara transaksional saat penimbangan selesai.
+          Stok otomatis sinkron dengan seluruh riwayat transaksi penimbangan nasabah.
         </CardDescription>
 
         <div className="overflow-x-auto">
@@ -58,12 +57,12 @@ export default async function BankInventoryPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-looop-border">
-              {bank?.inventory.map((inv) => (
-                <tr key={inv.id} className="hover:bg-looop-bg/50">
-                  <td className="py-3 px-4 font-bold text-looop-text">{inv.wasteItem.name}</td>
-                  <td className="py-3 px-4 text-looop-muted">{inv.wasteItem.category.name}</td>
-                  <td className="py-3 px-4 font-extrabold text-base text-looop-primary">
-                    {inv.stockKg.toFixed(1)} {inv.wasteItem.unit}
+              {inventory.map((inv) => (
+                <tr key={inv.id} className="hover:bg-looop-bg/50 transition">
+                  <td className="py-3 px-4 font-bold text-looop-text">{inv.wasteItemName}</td>
+                  <td className="py-3 px-4 text-looop-muted">{inv.categoryName}</td>
+                  <td className="py-3 px-4 font-extrabold text-base text-looop-primary font-mono">
+                    {inv.stockKg.toFixed(1)} {inv.unit}
                   </td>
                   <td className="py-3 px-4">
                     <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-looop-info border border-blue-200">

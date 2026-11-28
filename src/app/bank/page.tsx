@@ -1,40 +1,33 @@
+"use client";
+
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge, getStatusBadgeVariant } from "@/components/ui/badge";
 import { Scale, Inbox, Wallet, Package } from "lucide-react";
 import { formatRupiah, formatDate } from "@/lib/utils";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { INITIAL_WASTE_BANKS } from "@/lib/static-data";
+import { useAppStore } from "@/lib/store";
 
 export default function WasteBankDashboard() {
-  const bank = {
-    ...INITIAL_WASTE_BANKS[0],
-    payouts: [{ id: "pay-1" }],
-    deposits: [
-      {
-        id: "dep-1",
-        code: "DEP-202611-001",
-        status: "COMPLETED",
-        createdAt: new Date().toISOString(),
-        totalActual: 38500,
-        totalEstimated: 35000,
-        citizen: { name: "Budi Santoso" },
-      },
-      {
-        id: "dep-2",
-        code: "DEP-202611-002",
-        status: "WEIGHING",
-        createdAt: new Date().toISOString(),
-        totalActual: 0,
-        totalEstimated: 18000,
-        citizen: { name: "Siti Rahayu" },
-      },
-    ],
-  };
+  const { state, mounted } = useAppStore();
 
-  const totalDeposits = 14;
-  const pendingDeposits = 2;
-  const totalStockKg = 507.5;
+  if (!mounted) {
+    return (
+      <div className="py-12 text-center text-xs text-looop-muted">
+        Memuat dashboard operasional bank sampah...
+      </div>
+    );
+  }
+
+  const currentBank = state.wasteBanks[0];
+  const deposits = state.deposits.filter((d) => d.wasteBankId === currentBank.id);
+  const pendingDeposits = deposits.filter((d) => d.status === "SUBMITTED" || d.status === "WEIGHING");
+  const completedDeposits = deposits.filter((d) => d.status === "COMPLETED");
+
+  const totalStockKg = currentBank.inventory.reduce((acc, i) => acc + i.stockKg, 0);
+  const pendingPayouts = state.payouts.filter(
+    (p) => p.wasteBankId === currentBank.id && p.status === "REQUESTED"
+  );
 
   return (
     <div className="space-y-6">
@@ -43,7 +36,7 @@ export default function WasteBankDashboard() {
           Ringkasan Operasional Bank Sampah
         </h1>
         <p className="text-sm text-looop-muted">
-          Pantau transaksi penyetoran, penimbangan aktual, dan pergerakan persediaan.
+          Unit: <strong className="text-looop-text">{currentBank.name}</strong> ({currentBank.code}) — {currentBank.address}
         </p>
       </div>
 
@@ -52,7 +45,7 @@ export default function WasteBankDashboard() {
         <Card className="p-5 flex items-center justify-between">
           <div>
             <span className="text-xs font-semibold text-looop-muted block mb-1">Setoran Perlu Diproses</span>
-            <span className="text-2xl font-extrabold text-looop-text">{pendingDeposits}</span>
+            <span className="text-2xl font-extrabold text-looop-text">{pendingDeposits.length}</span>
           </div>
           <div className="w-10 h-10 rounded-full bg-amber-50 text-looop-warning flex items-center justify-center">
             <Inbox className="w-5 h-5" />
@@ -62,7 +55,7 @@ export default function WasteBankDashboard() {
         <Card className="p-5 flex items-center justify-between">
           <div>
             <span className="text-xs font-semibold text-looop-muted block mb-1">Total Setoran Selesai</span>
-            <span className="text-2xl font-extrabold text-looop-text">{totalDeposits}</span>
+            <span className="text-2xl font-extrabold text-looop-text">{completedDeposits.length}</span>
           </div>
           <div className="w-10 h-10 rounded-full bg-emerald-50 text-looop-success flex items-center justify-center">
             <Scale className="w-5 h-5" />
@@ -82,7 +75,7 @@ export default function WasteBankDashboard() {
         <Card className="p-5 flex items-center justify-between">
           <div>
             <span className="text-xs font-semibold text-looop-muted block mb-1">Permintaan Pencairan</span>
-            <span className="text-2xl font-extrabold text-looop-text">{bank.payouts.length}</span>
+            <span className="text-2xl font-extrabold text-looop-text">{pendingPayouts.length}</span>
           </div>
           <div className="w-10 h-10 rounded-full bg-looop-accent/40 text-looop-primary flex items-center justify-center">
             <Wallet className="w-5 h-5" />
@@ -117,28 +110,39 @@ export default function WasteBankDashboard() {
               </tr>
             </thead>
             <tbody className="divide-y divide-looop-border">
-              {bank.deposits.map((dep: any) => (
-                <tr key={dep.id} className="hover:bg-looop-bg/50 transition">
-                  <td className="py-3 px-4 font-mono font-bold text-looop-text">{dep.code}</td>
-                  <td className="py-3 px-4 font-medium text-looop-text">{dep.citizen.name}</td>
-                  <td className="py-3 px-4 text-looop-muted">{formatDate(dep.createdAt)}</td>
-                  <td className="py-3 px-4">
-                    <Badge variant={getStatusBadgeVariant(dep.status)}>
-                      {dep.status}
-                    </Badge>
-                  </td>
-                  <td className="py-3 px-4 font-semibold text-looop-text">
-                    {formatRupiah(dep.totalActual || dep.totalEstimated)}
-                  </td>
-                  <td className="py-3 px-4 text-right">
-                    <Link href={`/bank/weighing?depositId=${dep.id}`}>
-                      <Button variant="outline" size="sm" className="h-7 text-xs">
-                        {dep.status === "COMPLETED" ? "Lihat Detail" : "Timbang Sampah"}
-                      </Button>
-                    </Link>
+              {deposits.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-6 text-center text-looop-muted">
+                    Belum ada data transaksi penyetoran masuk.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                deposits.slice(0, 5).map((dep) => (
+                  <tr key={dep.id} className="hover:bg-looop-bg/50 transition">
+                    <td className="py-3 px-4 font-mono font-bold text-looop-text">{dep.code}</td>
+                    <td className="py-3 px-4 font-medium text-looop-text">
+                      <div>{dep.citizenName}</div>
+                      <div className="text-[10px] text-looop-muted">{dep.citizenPhone}</div>
+                    </td>
+                    <td className="py-3 px-4 text-looop-muted">{formatDate(dep.createdAt)}</td>
+                    <td className="py-3 px-4">
+                      <Badge variant={getStatusBadgeVariant(dep.status)}>
+                        {dep.status}
+                      </Badge>
+                    </td>
+                    <td className="py-3 px-4 font-semibold text-looop-text font-mono">
+                      {formatRupiah(dep.status === "COMPLETED" ? dep.totalActual : dep.totalEstimated)}
+                    </td>
+                    <td className="py-3 px-4 text-right">
+                      <Link href={`/bank/weighing?depositId=${dep.id}`}>
+                        <Button variant="outline" size="sm" className="h-7 text-xs">
+                          {dep.status === "COMPLETED" ? "Lihat Detail" : "Timbang Sampah"}
+                        </Button>
+                      </Link>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

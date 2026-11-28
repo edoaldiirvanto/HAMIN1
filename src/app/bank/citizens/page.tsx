@@ -1,25 +1,22 @@
+"use client";
+
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { prisma } from "@/lib/prisma";
 import { formatRupiah } from "@/lib/utils";
+import { useAppStore } from "@/lib/store";
 
-export const revalidate = 0;
+export default function BankCitizensPage() {
+  const { state, mounted } = useAppStore();
 
-export default async function BankCitizensPage() {
-  const bank = await prisma.wasteBank.findFirst({
-    where: { code: "BS-CTR-01" },
-  });
+  if (!mounted) {
+    return <div className="p-8 text-center text-xs text-looop-muted">Memuat data nasabah...</div>;
+  }
 
-  const balances = await prisma.userBalance.findMany({
-    where: { wasteBankId: bank?.id },
-    include: {
-      user: {
-        include: {
-          deposits: { where: { wasteBankId: bank?.id } },
-        },
-      },
-    },
-  });
+  const currentBank = state.wasteBanks[0];
+  const deposits = state.deposits.filter((d) => d.wasteBankId === currentBank.id);
+  const balances = state.citizenBalances.filter((b) => b.wasteBankId === currentBank.id);
+
+  // Warga yang memiliki relasi saldo/setoran
+  const citizenUsers = state.users.filter((u) => u.role === "CITIZEN");
 
   return (
     <div className="space-y-6">
@@ -28,14 +25,14 @@ export default async function BankCitizensPage() {
           Data Masyarakat & Nasabah Bank Sampah
         </h1>
         <p className="text-sm text-looop-muted">
-          Daftar nasabah aktif yang memiliki saldo atau transaksi di bank sampah ini.
+          Daftar nasabah aktif yang memiliki saldo atau riwayat transaksi di {currentBank.name}.
         </p>
       </div>
 
       <Card className="p-6">
-        <CardTitle className="mb-2">Nasabah Terdaftar ({balances.length} Warga)</CardTitle>
+        <CardTitle className="mb-2">Nasabah Terdaftar ({citizenUsers.length} Warga)</CardTitle>
         <CardDescription className="mb-4">
-          Keanggotaan bersifat opsional, seluruh warga penyetor tercatat secara transparan.
+          Keanggotaan bersifat fleksibel, seluruh warga penyetor tercatat secara transparan di buku besar.
         </CardDescription>
 
         <div className="overflow-x-auto">
@@ -51,27 +48,37 @@ export default async function BankCitizensPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-looop-border">
-              {balances.map((b) => (
-                <tr key={b.id} className="hover:bg-looop-bg/50">
-                  <td className="py-3 px-4 font-bold text-looop-text">{b.user.name}</td>
-                  <td className="py-3 px-4 text-looop-muted">
-                    <div>{b.user.email}</div>
-                    <div className="text-[10px]">{b.user.phone || "-"}</div>
-                  </td>
-                  <td className="py-3 px-4 font-medium text-looop-text">
-                    {b.user.deposits.length} kali transaksi
-                  </td>
-                  <td className="py-3 px-4 font-bold text-looop-secondary">
-                    {formatRupiah(b.available)}
-                  </td>
-                  <td className="py-3 px-4 text-amber-600 font-semibold">
-                    {formatRupiah(b.held)}
-                  </td>
-                  <td className="py-3 px-4">
-                    <Badge variant="success">Aktif Bertransaksi</Badge>
-                  </td>
-                </tr>
-              ))}
+              {citizenUsers.map((u) => {
+                const userDeposits = deposits.filter((d) => d.citizenId === u.id);
+                const userBalance = balances.find((b) => b.wasteBankId === currentBank.id) || {
+                  available: 0,
+                  held: 0,
+                };
+
+                return (
+                  <tr key={u.id} className="hover:bg-looop-bg/50 transition">
+                    <td className="py-3 px-4 font-bold text-looop-text">{u.name}</td>
+                    <td className="py-3 px-4 text-looop-muted">
+                      <div>{u.email}</div>
+                      <div className="text-[10px]">{u.phone || "-"}</div>
+                    </td>
+                    <td className="py-3 px-4 font-mono font-semibold text-looop-secondary">
+                      {userDeposits.length} kali transaksi
+                    </td>
+                    <td className="py-3 px-4 font-extrabold text-looop-primary font-mono">
+                      {formatRupiah(userBalance.available)}
+                    </td>
+                    <td className="py-3 px-4 text-amber-600 font-mono font-medium">
+                      {formatRupiah(userBalance.held)}
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-looop-success border border-emerald-200">
+                        Aktif
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

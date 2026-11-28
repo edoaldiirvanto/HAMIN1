@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Logo } from "@/components/ui/logo";
+import { useAppStore } from "@/lib/store";
 import {
   LayoutDashboard,
   Inbox,
@@ -37,6 +38,8 @@ const menuItems = [
 export function WasteBankLayoutClient({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { state } = useAppStore();
+  const bankName = state.wasteBanks[0]?.name || "Bank Sampah Guyub Rukun";
 
   return (
     <div className="min-h-screen bg-looop-bg flex flex-col md:flex-row">
@@ -58,7 +61,7 @@ export function WasteBankLayoutClient({ children }: { children: React.ReactNode 
         <div>
           <div className="hidden md:block mb-8 px-2">
             <Logo size="md" variant="light" />
-            <div className="text-[11px] text-looop-accent mt-1">Bank Sampah Sejahtera Lestari</div>
+            <div className="text-[11px] text-looop-accent mt-1 line-clamp-1">{bankName}</div>
           </div>
 
           <nav className="space-y-1">

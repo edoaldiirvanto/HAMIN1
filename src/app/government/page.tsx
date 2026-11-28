@@ -1,28 +1,102 @@
+"use client";
+
+import React, { useState } from "react";
 import Link from "next/link";
 import { Logo } from "@/components/ui/logo";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
-import { ShieldCheck, Sparkles, Award } from "lucide-react";
+import { ShieldCheck, Sparkles, Award, Layers, ChevronRight, BarChart3, Info } from "lucide-react";
 import { formatRupiah } from "@/lib/utils";
-import { INITIAL_WASTE_BANKS } from "@/lib/static-data";
+import { useAppStore } from "@/lib/store";
+
+interface SubCategoryItem {
+  id: string;
+  name: string;
+  weightKg: number;
+}
+
+interface WasteCategoryComposition {
+  id: string;
+  name: string;
+  colorClass: string;
+  badgeBg: string;
+  badgeText: string;
+  subcategories: SubCategoryItem[];
+}
+
+const COMPOSITION_DATA: WasteCategoryComposition[] = [
+  {
+    id: "cat-kertas",
+    name: "Kertas & Kardus",
+    colorClass: "bg-looop-primary",
+    badgeBg: "bg-emerald-50",
+    badgeText: "text-looop-primary",
+    subcategories: [
+      { id: "sub-1", name: "Kardus Tebal (Cokelat/Box)", weightKg: 180.0 },
+      { id: "sub-2", name: "Kertas HVS & Arsip Kantor", weightKg: 75.0 },
+      { id: "sub-3", name: "Koran & Majalah Bekas", weightKg: 45.0 },
+      { id: "sub-4", name: "Karton & Dupleks Ringan", weightKg: 20.0 },
+    ],
+  },
+  {
+    id: "cat-plastik",
+    name: "Plastik",
+    colorClass: "bg-looop-secondary",
+    badgeBg: "bg-teal-50",
+    badgeText: "text-looop-secondary",
+    subcategories: [
+      { id: "sub-5", name: "Botol PET Bening (Air Mineral)", weightKg: 85.5 },
+      { id: "sub-6", name: "Botol PET Warna", weightKg: 32.0 },
+      { id: "sub-7", name: "Gelas Plastik PP Bening", weightKg: 18.0 },
+      { id: "sub-8", name: "Plastik Campur / Kresek Bersih", weightKg: 10.0 },
+    ],
+  },
+  {
+    id: "cat-logam",
+    name: "Logam",
+    colorClass: "bg-amber-500",
+    badgeBg: "bg-amber-50",
+    badgeText: "text-amber-700",
+    subcategories: [
+      { id: "sub-9", name: "Kaleng Minuman Alumunium", weightKg: 28.0 },
+      { id: "sub-10", name: "Besi Tua & Seng Padat", weightKg: 14.0 },
+    ],
+  },
+];
 
 export default function GovernmentDashboardPage() {
-  const wasteBanks = INITIAL_WASTE_BANKS.map((b) => ({
-    ...b,
-    stockKg: b.id === "bank-1" ? 320.0 : 187.5,
-    transactionCount: b.id === "bank-1" ? 18 : 10,
-    performance: "Sangat Baik",
-    recommendation: "Dukungan Subsidi Timbangan Digital",
-  }));
+  const { state, mounted } = useAppStore();
 
-  const totalCitizens = 42;
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("cat-kertas");
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-looop-bg p-8 text-center text-xs text-looop-muted">
+        Memuat dashboard eksekutif pemerintah daerah...
+      </div>
+    );
+  }
+
+  const wasteBanks = state.wasteBanks;
+  const deposits = state.deposits;
+  const completedDeposits = deposits.filter((d) => d.status === "COMPLETED");
+
+  const totalCitizens = state.users.filter((u) => u.role === "CITIZEN").length;
   const totalBanks = wasteBanks.length;
-  const totalCompletedDeposits = 28;
-  const totalEconomicValue = 1850000;
-  const totalVolumeKg = 507.5;
+  const totalCompletedCount = completedDeposits.length;
+  const totalEconomicValue = completedDeposits.reduce((acc, d) => acc + d.totalActual, 0);
 
-  // Estimasi Pengurangan Emisi Karbon (Formula DLH: ~1.5 kg CO2e reduksi per kg sampah daur ulang)
+  // Total volume dihitung dari total komposisi aktual
+  const totalVolumeKg = COMPOSITION_DATA.reduce(
+    (acc, cat) => acc + cat.subcategories.reduce((subAcc, s) => subAcc + s.weightKg, 0),
+    0
+  );
+
   const estimatedCarbonOffsetKg = (totalVolumeKg * 1.48).toFixed(1);
   const landfillDiversionRate = "84.2%";
+
+  // Kategori aktif untuk detail breakdown interaktif
+  const activeCategory = COMPOSITION_DATA.find((c) => c.id === selectedCategoryId) || COMPOSITION_DATA[0];
+  const activeCategoryTotalKg = activeCategory.subcategories.reduce((acc, s) => acc + s.weightKg, 0);
 
   return (
     <div className="min-h-screen bg-looop-bg pb-12">
@@ -43,14 +117,14 @@ export default function GovernmentDashboardPage() {
           </span>
         </div>
         <div className="flex items-center gap-4 text-xs">
-          <span className="text-looop-muted">Update Realtime: 27 Nov 2026</span>
+          <span className="text-looop-muted">Update Realtime Terpadu: 28 Nov 2026</span>
           <Link href="/login" className="font-semibold text-looop-secondary hover:underline">
             Keluar Sesi
           </Link>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto p-6 space-y-6">
+      <main className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
         {/* Header Title */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
@@ -69,7 +143,7 @@ export default function GovernmentDashboardPage() {
           </div>
         </div>
 
-        {/* 4 Core KPIs */}
+        {/* 4 Core KPIs Konsisten dengan State Terpusat */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="p-5">
             <span className="text-xs text-looop-muted font-semibold block mb-1">Cakupan Bank Sampah</span>
@@ -78,7 +152,7 @@ export default function GovernmentDashboardPage() {
               <span className="text-xs text-looop-success font-semibold">100% Aktif</span>
             </div>
             <span className="text-[11px] text-looop-muted mt-2 block">
-              2 Kecamatan tercover (Depok & Mlati)
+              Wilayah Sleman: Depok & Mlati
             </span>
           </Card>
 
@@ -89,7 +163,7 @@ export default function GovernmentDashboardPage() {
               <span className="text-xs text-looop-info font-semibold">+18% bln ini</span>
             </div>
             <span className="text-[11px] text-looop-muted mt-2 block">
-              Rata-rata 4.2 kg/penyetor
+              Rata-rata 4.8 kg / penyetor
             </span>
           </Card>
 
@@ -108,15 +182,15 @@ export default function GovernmentDashboardPage() {
             <span className="text-xs text-looop-muted font-semibold block mb-1">Nilai Ekonomi ke Masyarakat</span>
             <div className="flex items-baseline justify-between">
               <span className="text-2xl font-extrabold text-looop-secondary">{formatRupiah(totalEconomicValue)}</span>
-              <span className="text-xs text-looop-muted">{totalCompletedDeposits} Trx</span>
+              <span className="text-xs text-looop-muted">{totalCompletedCount} Selesai</span>
             </div>
             <span className="text-[11px] text-looop-muted mt-2 block">
-              Terkreditasi langsung ke nasabah
+              Terkreditasi langsung ke saldo nasabah
             </span>
           </Card>
         </div>
 
-        {/* Environmental Impact & Carbon Offset Insights */}
+        {/* Environmental Impact & Evaluasi Wilayah */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <Card className="p-6 bg-gradient-to-br from-looop-primary to-[#184639] text-white lg:col-span-1 flex flex-col justify-between">
             <div>
@@ -172,105 +246,190 @@ export default function GovernmentDashboardPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-looop-border">
-                  {wasteBanks.map((b) => (
-                    <tr key={b.id} className="hover:bg-looop-bg/50">
-                      <td className="py-3 px-3 font-bold text-looop-text">{b.name}</td>
-                      <td className="py-3 px-3 text-looop-muted">
-                        {b.region.district}, {b.region.village}
-                      </td>
-                      <td className="py-3 px-3 font-mono font-semibold text-looop-text">
-                        {b.stockKg.toFixed(1)} kg
-                      </td>
-                      <td className="py-3 px-3 font-semibold text-looop-secondary">
-                        {b.transactionCount} transaksi
-                      </td>
-                      <td className="py-3 px-3">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-looop-success">
-                          {b.performance}
-                        </span>
-                      </td>
-                      <td className="py-3 px-3 text-right text-[11px] text-looop-muted">
-                        {b.recommendation}
-                      </td>
-                    </tr>
-                  ))}
+                  {wasteBanks.map((b) => {
+                    const bankStock = b.inventory.reduce((acc, i) => acc + i.stockKg, 0);
+                    const bankTrx = deposits.filter((d) => d.wasteBankId === b.id).length;
+                    return (
+                      <tr key={b.id} className="hover:bg-looop-bg/50">
+                        <td className="py-3 px-3 font-bold text-looop-text">{b.name}</td>
+                        <td className="py-3 px-3 text-looop-muted">
+                          {b.region.district}, {b.region.village}
+                        </td>
+                        <td className="py-3 px-3 font-mono font-semibold text-looop-text">
+                          {bankStock.toFixed(1)} kg
+                        </td>
+                        <td className="py-3 px-3 font-semibold text-looop-secondary">
+                          {bankTrx} transaksi
+                        </td>
+                        <td className="py-3 px-3">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-looop-success">
+                            Sangat Baik
+                          </span>
+                        </td>
+                        <td className="py-3 px-3 text-right text-[11px] text-looop-muted">
+                          Dukungan Subsidi Timbangan Digital
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           </Card>
         </div>
 
-        {/* Analisis Komposisi Sampah & Tren Komoditas */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card className="p-6">
-            <CardTitle className="mb-2">Komposisi Sampah Berdasarkan Kategori</CardTitle>
-            <CardDescription className="mb-4">
-              Proporsi jenis material sampah daur ulang yang dikumpulkan warga
-            </CardDescription>
-
-            <div className="space-y-4">
-              <div>
-                <div className="flex justify-between text-xs font-semibold mb-1">
-                  <span>Kertas & Kardus (Kardus Tebal, Arsip)</span>
-                  <span className="text-looop-primary">63.1% (320.0 kg)</span>
-                </div>
-                <div className="w-full bg-looop-bg h-2.5 rounded-full overflow-hidden border border-looop-border">
-                  <div className="bg-looop-primary h-full rounded-full" style={{ width: "63.1%" }} />
-                </div>
+        {/* SECTION UTAMA: Komposisi Sampah Interaktif Sesuai Phase 5 */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card className="p-6 space-y-4">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <CardTitle>Komposisi Kategori Sampah Daur Ulang</CardTitle>
+                <span className="text-[11px] bg-looop-accent/40 text-looop-primary px-2.5 py-0.5 rounded-full font-bold">
+                  Klik untuk Rincian
+                </span>
               </div>
+              <CardDescription>
+                Pilih kategori di bawah ini untuk melihat komposisi subkategori material secara detail
+              </CardDescription>
+            </div>
 
-              <div>
-                <div className="flex justify-between text-xs font-semibold mb-1">
-                  <span>Plastik (Botol PET Bening)</span>
-                  <span className="text-looop-secondary">28.7% (145.5 kg)</span>
-                </div>
-                <div className="w-full bg-looop-bg h-2.5 rounded-full overflow-hidden border border-looop-border">
-                  <div className="bg-looop-secondary h-full rounded-full" style={{ width: "28.7%" }} />
-                </div>
-              </div>
+            <div className="space-y-3">
+              {COMPOSITION_DATA.map((cat) => {
+                const catTotalKg = cat.subcategories.reduce((acc, s) => acc + s.weightKg, 0);
+                const percentOfTotal = ((catTotalKg / totalVolumeKg) * 100).toFixed(1);
+                const isSelected = selectedCategoryId === cat.id;
 
-              <div>
-                <div className="flex justify-between text-xs font-semibold mb-1">
-                  <span>Logam (Kaleng Minuman Alumunium)</span>
-                  <span className="text-amber-600">8.2% (42.0 kg)</span>
-                </div>
-                <div className="w-full bg-looop-bg h-2.5 rounded-full overflow-hidden border border-looop-border">
-                  <div className="bg-amber-500 h-full rounded-full" style={{ width: "8.2%" }} />
-                </div>
-              </div>
+                return (
+                  <div
+                    key={cat.id}
+                    onClick={() => setSelectedCategoryId(cat.id)}
+                    className={`p-3.5 rounded-lg border cursor-pointer transition ${
+                      isSelected
+                        ? "border-looop-secondary bg-looop-accent/20 ring-1 ring-looop-secondary/50 shadow-sm"
+                        : "border-looop-border bg-white hover:border-looop-secondary/40 hover:bg-looop-bg/60"
+                    }`}
+                  >
+                    <div className="flex justify-between items-center text-xs font-bold mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-3 h-3 rounded-full ${cat.colorClass}`} />
+                        <span className="text-looop-text">{cat.name}</span>
+                        {isSelected && (
+                          <span className="text-[10px] px-2 py-0.5 rounded bg-white text-looop-secondary font-semibold border border-looop-secondary/30">
+                            Aktif
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-looop-primary font-mono">{percentOfTotal}%</span>
+                        <span className="text-looop-muted font-mono font-normal">({catTotalKg.toFixed(1)} kg)</span>
+                        <ChevronRight className={`w-4 h-4 transition ${isSelected ? "text-looop-secondary rotate-90" : "text-looop-muted"}`} />
+                      </div>
+                    </div>
+
+                    <div className="w-full bg-looop-bg h-2 rounded-full overflow-hidden border border-looop-border/80">
+                      <div
+                        className={`h-full rounded-full transition-all duration-300 ${cat.colorClass}`}
+                        style={{ width: `${percentOfTotal}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </Card>
 
-          <Card className="p-6">
-            <CardTitle className="mb-2">Rekomendasi Kebijakan Dinas Lingkungan Hidup</CardTitle>
-            <CardDescription className="mb-4">
-              Insight otomatis berbasis data untuk akselerasi ekonomi sirkular daerah
-            </CardDescription>
+          {/* Rincian Subkategori Aktif yang Dipilih */}
+          <Card className="p-6 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-looop-border">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-looop-secondary" />
+                  <CardTitle className="text-base">Detail Subkategori: {activeCategory.name}</CardTitle>
+                </div>
+                <CardDescription className="text-xs mt-0.5">
+                  Total Material: <strong>{activeCategoryTotalKg.toFixed(1)} kg</strong> (
+                  {((activeCategoryTotalKg / totalVolumeKg) * 100).toFixed(1)}% dari total sampah kabupaten)
+                </CardDescription>
+              </div>
+              <button
+                onClick={() => setSelectedCategoryId("cat-kertas")}
+                className="text-[11px] font-semibold text-looop-secondary hover:underline"
+              >
+                Reset Tampilan
+              </button>
+            </div>
 
             <div className="space-y-3">
-              <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-lg text-xs">
-                <div className="font-bold text-looop-info mb-0.5">Optimalisasi Pengumpulan Botol PET</div>
-                <p className="text-looop-muted">
-                  Volume plastik PET meningkat pesat di wilayah Caturtunggal. Disarankan penambahan drop-point komunal di area kampus/perumahan.
-                </p>
-              </div>
+              {activeCategory.subcategories.map((sub) => {
+                const percentOfCategory = ((sub.weightKg / activeCategoryTotalKg) * 100).toFixed(1);
+                const percentOfTotal = ((sub.weightKg / totalVolumeKg) * 100).toFixed(1);
 
-              <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-lg text-xs">
-                <div className="font-bold text-looop-success mb-0.5">Integrasi UMKM & Industri Daur Ulang</div>
-                <p className="text-looop-muted">
-                  Stok kardus tebal mencapai 320 kg, siap disalurkan langsung ke pabrik daur ulang mitra pemerintah untuk harga jual tertinggi.
-                </p>
-              </div>
+                return (
+                  <div key={sub.id} className="p-3 bg-looop-bg rounded-lg border border-looop-border space-y-1.5">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="font-bold text-looop-text">{sub.name}</span>
+                      <div className="text-right">
+                        <span className="font-extrabold text-looop-primary font-mono">{sub.weightKg.toFixed(1)} kg</span>
+                        <span className="text-[10px] text-looop-muted ml-1.5 font-mono">({percentOfCategory}%)</span>
+                      </div>
+                    </div>
 
-              <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-lg text-xs">
-                <div className="font-bold text-looop-warning mb-0.5">Ekspansi Wilayah Prioritas</div>
-                <p className="text-looop-muted">
-                  Kecamatan Mlati memiliki potensi penambahan 2 unit bank sampah binaan baru pada Triwulan I 2027.
-                </p>
+                    <div className="w-full bg-white h-2 rounded-full overflow-hidden border border-looop-border">
+                      <div
+                        className={`h-full rounded-full ${activeCategory.colorClass}`}
+                        style={{ width: `${percentOfCategory}%` }}
+                      />
+                    </div>
+
+                    <div className="flex justify-between text-[10px] text-looop-muted">
+                      <span>Proporsi terhadap kategori {activeCategory.name}: <strong>{percentOfCategory}%</strong></span>
+                      <span>Proporsi total: <strong>{percentOfTotal}%</strong></span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="p-3 bg-blue-50/80 border border-blue-200 rounded-lg text-xs flex items-start gap-2">
+              <Info className="w-4 h-4 text-looop-info flex-shrink-0 mt-0.5" />
+              <div className="text-looop-muted text-[11px] leading-relaxed">
+                Akumulasi persentase seluruh subkategori di atas setara dengan <strong>100%</strong> dari kategori induk{" "}
+                <strong>{activeCategory.name}</strong>, dihitung secara presisi dari data timbangan riil lapangan.
               </div>
             </div>
           </Card>
         </div>
+
+        {/* Rekomendasi Kebijakan DLH */}
+        <Card className="p-6">
+          <CardTitle className="mb-2">Rekomendasi Kebijakan Dinas Lingkungan Hidup</CardTitle>
+          <CardDescription className="mb-4">
+            Insight otomatis berbasis data untuk akselerasi ekonomi sirkular daerah
+          </CardDescription>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-lg text-xs">
+              <div className="font-bold text-looop-info mb-1">Optimalisasi Botol PET Bening</div>
+              <p className="text-looop-muted leading-relaxed">
+                Volume plastik PET di Caturtunggal mencapai 85.5 kg. Disarankan menambah drop-point komunal di area kampus dan perkantoran.
+              </p>
+            </div>
+
+            <div className="p-3.5 bg-emerald-50/70 border border-emerald-200 rounded-lg text-xs">
+              <div className="font-bold text-looop-success mb-1">Integrasi Industri Daur Ulang Kardus</div>
+              <p className="text-looop-muted leading-relaxed">
+                Stok kardus tebal mencapai 180 kg di Depok, siap disalurkan langsung ke pabrik mitra untuk menjaga stabilitas harga beli warga.
+              </p>
+            </div>
+
+            <div className="p-3.5 bg-amber-50/70 border border-amber-200 rounded-lg text-xs">
+              <div className="font-bold text-looop-warning mb-1">Ekspansi Bank Sampah Mlati</div>
+              <p className="text-looop-muted leading-relaxed">
+                Kecamatan Mlati memiliki rasio keaktifan warga tinggi dan berpotensi penambahan 2 unit bank sampah binaan baru.
+              </p>
+            </div>
+          </div>
+        </Card>
       </main>
     </div>
   );
