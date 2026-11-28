@@ -72,6 +72,12 @@ Looop: Platform Bank Sampah Digital Multi-Role (Masyarakat / Citizen, Bank Sampa
 
 ### Phase 8: Verification, Build & Deployment Testing
 - **Status:** COMPLETED ✅
+- **Bug Fix & Idempotency Resolution**:
+  - Addressed critical issue on `/bank/weighing` where completed transactions remained re-submittable.
+  - Implemented strict multi-tier idempotency guards across both client store and backend Prisma transactions.
+  - Form inputs lock into read-only mode once a deposit is `COMPLETED`.
+  - Button transitions to permanent disabled state with label "Transaksi Sudah Diselesaikan & Saldo Terkredit".
+  - Ledger entries (`ledgerEntries`) append-only verified.
 - **Build Result:**
   - `npm run build` completed with 0 errors.
   - 36/36 static and dynamic routes compiled successfully.

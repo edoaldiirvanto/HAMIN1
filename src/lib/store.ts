@@ -25,9 +25,25 @@ export interface DepositRecord {
   status: "SUBMITTED" | "ACCEPTED" | "WEIGHING" | "COMPLETED" | "CANCELLED";
   notes?: string;
   createdAt: string;
+  completedAt?: string;
+  creditedAt?: string;
+  isCredited?: boolean;
   totalEstimated: number;
   totalActual: number;
   items: DepositItemInput[];
+}
+
+export interface LedgerEntryRecord {
+  id: string;
+  referenceNo: string;
+  userId: string;
+  wasteBankId: string;
+  type: "CREDIT_DEPOSIT" | "DEBIT_PAYOUT";
+  amount: number;
+  description: string;
+  depositId?: string;
+  payoutId?: string;
+  createdAt: string;
 }
 
 export interface PayoutRecord {
@@ -94,6 +110,7 @@ interface AppState {
   wasteBanks: WasteBankData[];
   deposits: DepositRecord[];
   payouts: PayoutRecord[];
+  ledgerEntries: LedgerEntryRecord[];
   citizenBalances: {
     id: string;
     wasteBankId: string;
@@ -263,6 +280,9 @@ const INITIAL_STATE: AppState = {
       citizenName: "Budi Santoso",
       citizenPhone: "081234567890",
       status: "COMPLETED",
+      isCredited: true,
+      creditedAt: "2026-11-26T10:45:00.000Z",
+      completedAt: "2026-11-26T10:45:00.000Z",
       notes: "Kardus rapi diikat, botol plastik bersih tanpa label",
       createdAt: "2026-11-26T10:30:00.000Z",
       totalEstimated: 35000,
@@ -333,6 +353,19 @@ const INITIAL_STATE: AppState = {
       createdAt: "2026-11-24T14:00:00.000Z",
     },
   ],
+  ledgerEntries: [
+    {
+      id: "led-1",
+      referenceNo: "LOO-TRX-000001",
+      userId: "user-citizen-1",
+      wasteBankId: "bank-1",
+      type: "CREDIT_DEPOSIT",
+      amount: 38500,
+      description: "Kredit hasil penimbangan transaksi DEP-202611-001",
+      depositId: "dep-1",
+      createdAt: "2026-11-26T10:45:00.000Z",
+    },
+  ],
   citizenBalances: [
     {
       id: "bal-1",
@@ -361,7 +394,11 @@ function getStoredState(): AppState {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_STATE));
       return INITIAL_STATE;
     }
-    return JSON.parse(raw);
+    const parsed: AppState = JSON.parse(raw);
+    if (!Array.isArray(parsed.ledgerEntries)) {
+      parsed.ledgerEntries = INITIAL_STATE.ledgerEntries;
+    }
+    return parsed;
   } catch {
     return INITIAL_STATE;
   }
@@ -457,6 +494,20 @@ export function useAppStore() {
     if (depIndex === -1) return null;
 
     const dep = current.deposits[depIndex];
+
+    // IDEMPOTENCY GUARD: Jika transaksi sudah COMPLETED atau sudah dikreditkan, tolak proses ulang
+    if (dep.status === "COMPLETED" || dep.isCredited) {
+      console.warn(`[IDEMPOTENCY] Transaksi ${dep.code} (${dep.id}) sudah COMPLETED & dikreditkan. Permintaan kredit diabaikan.`);
+      return { ...dep, alreadyCompleted: true };
+    }
+
+    // Double check apakah transaksi ini sudah memiliki catatan di ledger
+    const existingLedger = current.ledgerEntries?.find((l) => l.depositId === depositId);
+    if (existingLedger) {
+      console.warn(`[IDEMPOTENCY] Transaksi ${dep.code} sudah memiliki catatan ledger ${existingLedger.referenceNo}.`);
+      return { ...dep, alreadyCompleted: true };
+    }
+
     let totalActual = 0;
 
     const updatedItems = dep.items.map((it) => {
@@ -471,9 +522,14 @@ export function useAppStore() {
       };
     });
 
+    const completionTime = new Date().toISOString();
+
     const updatedDeposit: DepositRecord = {
       ...dep,
       status: "COMPLETED",
+      isCredited: true,
+      creditedAt: completionTime,
+      completedAt: completionTime,
       notes: notes || dep.notes,
       totalActual,
       items: updatedItems,
@@ -490,6 +546,20 @@ export function useAppStore() {
       return bal;
     });
 
+    // Catat ke ledger secara atomik
+    const nextLedgerCount = (current.ledgerEntries?.length || 0) + 1;
+    const newLedgerEntry: LedgerEntryRecord = {
+      id: `led-${Date.now()}`,
+      referenceNo: `LOO-TRX-${String(nextLedgerCount).padStart(6, "0")}`,
+      userId: dep.citizenId,
+      wasteBankId: dep.wasteBankId,
+      type: "CREDIT_DEPOSIT",
+      amount: totalActual,
+      description: `Kredit hasil penimbangan transaksi ${dep.code}`,
+      depositId: dep.id,
+      createdAt: completionTime,
+    };
+
     // Update stok gudang bank sampah
     const updatedBanks = current.wasteBanks.map((b) => {
       if (b.id === dep.wasteBankId) {
@@ -500,7 +570,7 @@ export function useAppStore() {
             newInv[invIdx] = {
               ...newInv[invIdx],
               stockKg: Number((newInv[invIdx].stockKg + it.actualKg).toFixed(1)),
-              updatedAt: new Date().toISOString(),
+              updatedAt: completionTime,
             };
           }
         });
@@ -517,6 +587,7 @@ export function useAppStore() {
       deposits: nextDeposits,
       citizenBalances: updatedBalances,
       wasteBanks: updatedBanks,
+      ledgerEntries: [newLedgerEntry, ...(current.ledgerEntries || [])],
     };
 
     saveState(nextState);

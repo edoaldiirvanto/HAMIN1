@@ -16,6 +16,29 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Deposit tidak ditemukan" }, { status: 404 });
     }
 
+    // IDEMPOTENCY CHECK: Jika deposit sudah COMPLETED atau sudah ada ledger kredit, tolak proses ulang
+    if (deposit.status === "COMPLETED") {
+      return NextResponse.json({
+        success: true,
+        alreadyCompleted: true,
+        message: "Transaksi penimbangan ini sudah selesai dan tidak dapat diproses ulang.",
+        totalActual: deposit.totalActual,
+      });
+    }
+
+    const existingLedger = await prisma.ledgerEntry.findFirst({
+      where: { depositId: deposit.id, type: "CREDIT_DEPOSIT" },
+    });
+
+    if (existingLedger) {
+      return NextResponse.json({
+        success: true,
+        alreadyCompleted: true,
+        message: "Kredit saldo untuk transaksi ini telah dicatat sebelumnya.",
+        totalActual: deposit.totalActual,
+      });
+    }
+
     let calculatedTotalActual = 0;
 
     await prisma.$transaction(async (tx: any) => {

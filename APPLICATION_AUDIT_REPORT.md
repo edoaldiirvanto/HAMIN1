@@ -56,7 +56,21 @@ A thorough full-stack quality audit, functional verification, and continuous imp
 
 ---
 
-## 3. Data Consistency & Business Logic Verification
+## 3. Data Consistency, Idempotency & Bug Fixes
+
+### Critical Bug Resolution: Duplicate Saldo Credit & Weighing Idempotency
+- **Root Cause**: On `/bank/weighing`, after completing a transaction and crediting the citizen's balance, the submit button remained active as "Selesaikan & Kreditkan Saldo" and the input fields remained editable. Repeated submissions triggered `completeWeighing` multiple times without checking if the transaction had already been completed and credited.
+- **Root-Cause Fixes Applied**:
+  1. **Strict Idempotency Guard in Central Store (`src/lib/store.ts`)**:
+     - Verified `deposit.status === "COMPLETED"` and `deposit.isCredited === true`. If already completed, returns immediately with `{ ...dep, alreadyCompleted: true }`, completely halting balance and inventory mutations.
+     - Enforced single ledger entry check (`ledgerEntries.find(l => l.depositId === depositId)`).
+     - Persists single immutable ledger record per transaction (`LOO-TRX-XXXXXX`) referencing citizen ID, bank ID, and exact amount.
+  2. **Server-Side API Idempotency (`src/app/api/bank/weighing/route.ts`)**:
+     - Added atomic status check `if (deposit.status === "COMPLETED")` and existing `ledgerEntry` check in Prisma transaction.
+  3. **UI/UX State Transition (`src/app/bank/weighing/page.tsx`)**:
+     - **PENDING / WEIGHING**: Active inputs, active button "Selesaikan & Kreditkan Saldo".
+     - **PROCESSING**: `loading` state, disabled button "Menyimpan & Mengkreditkan...", preventing double-clicks.
+     - **COMPLETED**: Input fields permanently disabled (`cursor-not-allowed`, slate background) with lock icon "Mode Read-Only (Terkunci)". Button permanently disabled with text "Transaksi Sudah Diselesaikan & Saldo Terkredit" and green checkmark. Banner notifies user that funds were credited and logged.
 
 | Workflow | Trigger | Verification Result |
 |---|---|---|
